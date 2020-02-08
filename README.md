@@ -1,5 +1,5 @@
 [Core]: https://github.com/lskzsy/GoDojoSGF
 
-# GoDojoSGF-app
+# HeyGo
 Online SGF editor<br>
 Please visit main project: [Core]
