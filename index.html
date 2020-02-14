@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title> 【GoDojo】在线SGF编辑器 | SGF Online </title>
+    <title> 【GoDojo】嘿嘿 - HeyGo | Online SGF Editor </title>
     <link href="css/google-icons.css" rel="stylesheet">
     <link href="css/materialize.min.css" rel="stylesheet">
     <link href="css/jstree.min.css" rel="stylesheet">
@@ -57,29 +57,48 @@
         <li><a onclick="$('#about-modal').modal('open');">关于</a></li>
     </ul>
 
-    <div style="float: right; text-align: right;">
-        <button class="waves-effect black-text grey lighten-4 btn" style="margin: 20px;"> 
-            <i class="material-icons left">person</i> 登录/注册 </button>
-        
-        <div id="tree-card" class="card" style="margin-top: 0px; margin-right: 20px; width: 250px; text-align: left; overflow: auto;">
+    <nav class="grey lighten-6">
+        <div class="nav-wrapper row" style="margin-left: 180px;">
+            <span id="page-title"></span>
+            <div id="cloud-autosave-switch" class="switch" style="display: none; margin-left: 20px;">
+                <label style="color: black;">
+                    自动同步
+                    <input type="checkbox">
+                    <span class="lever" style="margin: 0px;"></span>
+                </label>
+            </div>
+            <a id="cloud-update-btn" class="waves-effect waves-light btn-flat" style="display: none;" onclick="update_cloud_sgf();">
+                <i class="material-icons left" style="line-height: inherit; font-size: 1.3rem; margin-right: 0px;">refresh</i>
+                未保存改动
+            </a>
+            <div style="position: absolute; right: 20px; display: inline;">
+                <button id="user-login-btn" class="waves-effect black-text grey lighten-4 btn" onclick="dataBackup(); NETAUTH.login();"> 
+                    <i class="material-icons left" style="line-height: inherit; font-size: 1.3rem">person</i> 登录/注册 
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div style="float: right; text-align: right;">    
+        <div id="tree-card" class="card" style="margin-top: 20px; margin-right: 20px; width: 250px; text-align: left; overflow: auto;">
             <div class="card-content" id="tree">
             </div>
         </div>
     </div>
     <div class="container">
-        <div class="row" style="margin-bottom: 0;">
+        <div class="row" style="padding: 10px; margin-bottom: 0;">
             <div id="chessboard" style="margin: 0 auto; width: 400px; height: 400px;">
             </div>
         </div>
 
         <div class="row" style="text-align: center;">
-            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.left();">快退
+            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.instance.left();">快退
                     <i class="material-icons left">fast_rewind</i></button>
-            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.back();">后退
+            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.instance.back();">后退
                     <i class="material-icons left">arrow_left</i></button>
-            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.continue();">前进
+            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.instance.continue();">前进
                     <i class="material-icons right">arrow_right</i></button>
-            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.right();">快进
+            <button class="btn waves-effect black-text grey lighten-4" onclick="sgf && sgf.instance.right();">快进
                     <i class="material-icons right">fast_forward</i></button>
         </div>
     </div>
@@ -89,7 +108,37 @@
             <i class="large material-icons">menu</i>
         </a>
         <ul>
-            <li><a class="btn-floating grey lighten-3" onclick="donwloadSGF();"><i class="material-icons">cloud_download</i></a></li>
+            <li><a 
+                id="cloud-remove-btn"
+                class="btn-floating grey lighten-6 tooltipped" 
+                style="display: none;"
+                onclick="cloud_remove();" 
+                data-position="top" data-tooltip="删除云棋谱">
+                <i class="material-icons">delete</i></a></li>
+            <li><a 
+                id="cloud-share-btn"
+                class="btn-floating grey lighten-6 tooltipped" 
+                style="display: none;"
+                data-clipboard-text=""
+                data-position="top" data-tooltip="分享云棋谱">
+                <i class="material-icons">share</i></a></li>
+            <li><a 
+                id="cloud-editor-btn"
+                class="btn-floating grey lighten-6 tooltipped" 
+                style="display: none;"
+                onclick="cloud_editor();" 
+                data-position="top" data-tooltip="修改云棋谱信息">
+                <i class="material-icons">cloud_done</i></a></li>
+            <li><a 
+                class="btn-floating grey lighten-6 tooltipped" 
+                onclick="uploadSGF();" 
+                data-position="top" data-tooltip="上传棋谱">
+                <i class="material-icons">cloud_upload</i></a></li>
+            <li><a 
+                class="btn-floating grey lighten-6 tooltipped" 
+                onclick="downloadSGF();" 
+                data-position="top" data-tooltip="下载棋谱">
+                <i class="material-icons">cloud_download</i></a></li>
         </ul>
     </div>
     <div class="tap-target grey lighten-6" data-target="menu">
@@ -135,6 +184,61 @@
         </div>
     </div>
 
+    <div id="upload-modal" class="modal" style="width: 300px;">
+        <div class="modal-content">
+            <h5> 保存到云端 </h5>
+            <div class="divider"></div>
+            <div style="margin-top: 20px; margin-bottom: 20px;">
+                <div class="row input-field"> 
+                    <input id="upload-modal-filename" type="text" class="validate" data-length="60">
+                    <label for="upload-modal-filename">文件名</label>
+                    <span id="upload-modal-filename-helper" class="helper-text" data-error="文件名不可用" data-success="文件名可用"></span>
+                </div>
+                <div class="row input-field"> 
+                    <textarea id="upload-modal-comment" class="materialize-textarea" data-length="255"></textarea>
+                    <label for="upload-modal-comment">备注</label>
+                </div>
+                <div class="row input-field">
+                    <label>
+                        <input id="upload-modal-share" type="checkbox"/>
+                        <span> 共享给所有GoDojo用户 </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="waves-effect btn-flat" onclick="doUploadSGF();">上传</a>
+            <a class="modal-close waves-effect btn-flat">取消</a>
+        </div>
+    </div>
+
+    <div id="cloud-list-modal" class="modal" style="width: 500px;">
+        <div class="modal-content">
+            <h5> 云端列表 </h5>
+            <div class="divider"></div>
+            <div style="margin-top: 20px; margin-bottom: 20px; height: 320px; overflow: scroll;">
+                <ul id="cloud-list-modal-list" class="collection">
+                </ul>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="modal-close waves-effect btn-flat">返回</a>
+        </div>
+    </div>
+
+    <div id="relogin-modal" class="modal" style="width: 300px;">
+        <div class="modal-content">
+            <h5 id="relogin-modal-title"> 是否重新登录？</h5>
+            <div class="divider"></div>
+            <div style="margin-top: 20px; margin-bottom: 20px; text-align: center;">
+                <a class="btn waves-effect black-text grey lighten-4" onclick="dataBackup(); NETAUTH.login();"> 
+                    <i class="material-icons left">done</i>确定</a>
+                <a class="btn waves-effect black-text grey lighten-4 modal-close">
+                    <i class="material-icons left">close</i>取消</a>
+            </div>
+        </div>
+    </div>
+
     <div id="new-modal" class="modal" style="width: 300px;">
         <div class="modal-content">
             <h4>创建新棋谱</h4>
@@ -156,76 +260,39 @@
         </div>
     </div>
 
+    <!-- ========== Libaries ========== -->
     <script src="js/jquery.min.js"></script>
     <script src="js/jstree.min.js"></script>
     <script src="js/materialize.min.js"></script>
+    <script src="js/clipboard.min.js"></script>
+    <script src="https://godojo.cn/auth/login.js"></script>
+    <!-- ============================== -->
+
+    <!-- ============ Core ============ -->
     <script src="GoDojoSGF.bundle.js"></script>
+    <!-- ============================== -->
+
+    <!-- ========== Services ========== -->
+    <script src="js/theme.js"></script>
+    <script src="js/pc/tree.js"></script>
+    <script src="js/pc/player.js"></script>
+    <script src="js/backend.js"></script>
+    <script src="js/resume.js"></script>
+    <!-- ============================== -->
+
+    <!-- Page -->
     <script>
         window.sgf = false;
 
-        $('#tree').jstree({
-            core: {
-                check_callback: true,
-                data : [
-                    {
-                        id: '0',
-                        type: '#',
-                        text: 'GoDojo SGF Editor',
-                        state: {
-                            opened: true,
-                            selected: true
-                        },
-                        children: []
-                    }
-                ],
-            },
-            types: {
-                '#': {
-                    icon: 'img/logo32.png',
-                    valid_children: ['wstone', 'bstone']
-                },
-                wstone: {
-                    icon: 'img/wstone.png',
-                    valid_children: ['wstone', 'bstone']
-                },
-                bstone: {
-                    icon: 'img/bstone.png',
-                    valid_children: ['wstone', 'bstone']
-                }
-            },
-            contextmenu: {
-                items: {
-                    delete: {
-                        label: '删除',
-                        action: function () {
-                        }
-                    }
-                }
-            },
-            plugins: [
-                "contextmenu", "types", "wholerow"
-            ]
-        });
-
-        // $('.fixed-action-btn').floatingActionButton({ hoverEnabled: false });
+        /** initialize */
+        $('.tooltipped').tooltip();
         $('select').formSelect();
         $('.sidenav').sidenav();
         $('.dropdown-trigger').dropdown();
         $('.tap-target').tapTarget();
         $('.fixed-action-btn').floatingActionButton({ direction: 'left' });
         $('.modal').modal({ dismissible: false });
-
-        $('#begin-modal').modal('open');
-
-        window.onresize = function() {
-            const size = $(document).height() * 0.9;
-            const boardDiv = $('#chessboard');
-            boardDiv.width(size);
-            boardDiv.height(size);
-            sgf && sgf.resize(size, size);
-            $('#tree-card').height($(document).height() * 0.7);
-        }
-        window.onresize();
+        $('input#upload-modal-filename, textarea#upload-modal-comment').characterCounter();
 
         $('.begin-btn').on('click', (e) => {
             const type = e.currentTarget.attributes.rel.value;
@@ -237,31 +304,59 @@
                     localBoard();
                     break;
                 case 'cloud':
+                    cloud_list_open();
                     break;
             }
         });
 
+        function newBoard() {
+            const width = $('#board-width-text').val();
+            const height = $('#board-height-text').val();
+            const size = width == height ? width : `${width}:${height}`;
+            window.sgf = SGFPlayer.create(size, 'chessboard', 'tree');
+            $('#new-modal').modal('close');
+            $('#begin-modal').modal('close');
+            cloud_mode(false);
+            updatePageTitle('未命名');
+        }
+
+        function localBoard() {
+            const reader = $('<input style="display: none;" type="file" accept=".sgf">');
+            reader.on('change', (e) => {
+                const file = e.currentTarget.files[0];
+                const fileReader = new FileReader();
+                cloud_mode(false);
+                updatePageTitle(`本地棋谱 - ${file.name}`);
+                fileReader.readAsText(file);
+                fileReader.onload = ee => {
+                    window.sgf = SGFPlayer.open(ee.target.result, 'chessboard', 'tree');
+                    $('#begin-modal').modal('close');
+                }
+            });
+            reader.click();
+        }
+
         $('#coordinateShow').on('click', (e) => {
             if (e.currentTarget.checked) {
-                sgf && sgf.showCoordinate();
+                sgf && sgf.instance.showCoordinate();
             } else {
-                sgf && sgf.hideCoordinate();
+                sgf && sgf.instance.hideCoordinate();
             }
         });
 
         $('#stepShow').on('click', (e) => {
             if (e.currentTarget.checked) {
-                sgf && sgf.showStep();
+                sgf && sgf.instance.showStep();
             } else {
-                sgf && sgf.hideStep();
+                sgf && sgf.instance.hideStep();
             }
         });
 
         $('#promptShow').on('click', (e) => {
             if (e.currentTarget.checked) {
-                sgf && sgf.showPrompt();
+                sgf && sgf.instance.showPrompt();
             } else {
-                sgf && sgf.hidePrompt();
+                sgf && sgf.instance.hidePrompt();
             }
         });
 
@@ -310,177 +405,266 @@
                     M.toast({html: '交替落子', displayLength: 1500});
                     break;
             }
-            sgf && sgf.setInputMode(mode);
+            sgf && sgf.instance.setInputMode(mode);
         }
 
-        function donwloadSGF() {
+        function updatePageTitle(title) {
+            $('#page-title').text(title);
+        }
+
+        function downloadSGF() {
             if (sgf) {
                 const time = new Date();
                 const fileName = window.prompt('保存文件名', `${time.getTime()}`);
-
-                const text = sgf.save();
-                const a = document.createElement('a');
-                const blob = new Blob([text]);
-                a.download = fileName + '.sgf';
-                a.href = URL.createObjectURL(blob);
-                a.click();
-                URL.revokeObjectURL(blob);
-            }
-        }
-
-        function newBoard() {
-            const width = $('#board-width-text').val();
-            const height = $('#board-height-text').val();
-            const size = width == height ? width : `${width}:${height}`;
-            window.sgf = SGF.create({ boardSize: size, isKo: true });
-            sgfBeginning();
-            $('#new-modal').modal('close');
-            $('#begin-modal').modal('close');
-        }
-
-        function localBoard() {
-            const reader = $('<input style="display: none;" type="file" accept=".sgf">');
-            reader.on('change', (e) => {
-                const file = e.currentTarget.files[0];
-                const fileReader = new FileReader();
-                fileReader.readAsText(file);
-                fileReader.onload = ee => {
-                    const sgfData = ee.target.result;
-                    window.sgf = SGF.create({ data: sgfData });
-                    sgfBeginning();
-                    $('#begin-modal').modal('close');
-                }
-            });
-            reader.click();
-        }
-
-        function translateX(x) {
-            const a = 'A'.charCodeAt();
-            if (x >= 8) {
-                x++;
-            }
-            return String.fromCharCode(a + x);
-        }
-
-        function sgfBeginning() {
-            const size = $(document).height() * 0.9;
-            window.sgf.showOn('chessboard', {
-                background: '#FFBA75',
-                bgMaterial: 'img/material_background_1.jpg',
-                styleWidth: size,
-                styleHeight: size,
-                wstoneMaterial: 'img/white.png',
-                bstoneMaterial: 'img/black.png'
-            });
-            window.onresize();
-            window.sgf.onStoneCreated(onStoneCreated);
-            window.sgf.onStoneDeleted(onStoneDeleted);
-        }
-
-        function onStoneCreated(steps, step) {
-            updateTree();
-
-            let nid = '0_';
-            for (let i = 0; i < steps.length - 1; i++) {
-                nid += `${steps[i]}_`;
-            }
-            nid += steps[steps.length - 1];
-            
-            const tree = $('#tree').jstree();
-            tree.deselect_all();
-            tree.select_node(nid);
-            $('#tree-card').animate({ scrollTop: $(`#${nid}_anchor`).position().top }, 100);
-            $('#tree-card').animate({ scrollLeft: $(`#${nid}_anchor`).position().left }, 100);
-        }
-
-        function onStoneDeleted(steps) {
-            updateTree();
-        }
-
-        function updateTree() {
-            if (sgf) {
-                clearTree();
-                const branch = sgf.runtime.branch.data;
-                doUpdateTree('0', branch, ['0']);
-            }
-        }
-
-        function doUpdateTree(node, branch, prev) {
-            const tree = $('#tree').jstree();
-            let branchBegin = false;
-            let lastId = false;
-            let prevId = '';
-            prev.forEach(p => prevId += `${p}_`);
-
-            for (let i = 0; i < branch.length; i++) {
-                if (branch[i] instanceof Array) {
-                    branchBegin = i;
-                    lastId = `${prevId}${i - 1}`;
-                    break;
-                } else if (branch[i] === false) {
-                    continue;
-                } else {
-                    const stone = branch[i].stone;
-                    const id = `${prevId}${i}`;
-                    tree.create_node(node, {
-                        id: id,
-                        type: `${stone.color}stone`,
-                        text: `[${translateX(stone.x)}, ${stone.y + 1}]`
-                    }, 'last', false, true);
+                if (fileName) {
+                    const text = sgf.instance.save();
+                    const a = document.createElement('a');
+                    const blob = new Blob([text]);
+                    a.download = fileName + '.sgf';
+                    a.href = URL.createObjectURL(blob);
+                    a.click();
+                    URL.revokeObjectURL(blob);
                 }
             }
-            if (branchBegin !== false) {
-                prev.push(branchBegin);
-                doUpdateTree(node, branch[branchBegin], prev);
-                prev.pop();
+        }
 
-                if (branch.length - branchBegin > 2) {
-                    for (let i = branchBegin + 1; i < branch.length; i++) {
-                        const beginId = `${prevId}${i}_0`;
-                        const beginStone = branch[i][0].stone;
-                        tree.create_node(lastId, {
-                            id: beginId,
-                            type: `${beginStone.color}stone`,
-                            text: `[${translateX(beginStone.x)}, ${beginStone.y + 1}]`
-                        }, 'last', false, true);
-                        prev.push(i);
-                        const br = branch[i].slice();
-                        br[0] = false;
-                        doUpdateTree(beginId, br, prev);
-                        prev.pop();
+        const UPLOAD_MODAL = {
+            FILENAME: $('#upload-modal-filename'),
+            FILENAME_HELPER: $('#upload-modal-filename-helper'),
+            COMMENT: $('#upload-modal-comment'),
+            SHARE: $('#upload-modal-share'),
+            IS_FILENAME_VALID: false
+        };
+
+        UPLOAD_MODAL.FILENAME.bind("input propertychange", function () {
+            UPLOAD_MODAL.FILENAME.hasClass('valid') && UPLOAD_MODAL.FILENAME.removeClass('valid');
+            UPLOAD_MODAL.FILENAME.hasClass('invalid') && UPLOAD_MODAL.FILENAME.removeClass('invalid');
+        });
+
+        UPLOAD_MODAL.FILENAME.blur(function () {
+            const filenameText = $.trim(UPLOAD_MODAL.FILENAME.val());
+            if (filenameText.length > 0) {
+                SGFDB.existFilename(filenameText, exist => {
+                    UPLOAD_MODAL.IS_FILENAME_VALID = !exist;
+                    if (exist) {
+                        UPLOAD_MODAL.FILENAME_HELPER.attr('data-error', '已存在相同文件名');
+                        UPLOAD_MODAL.FILENAME.removeClass('valid');
+                        UPLOAD_MODAL.FILENAME.addClass('invalid');
                     }
+                });
+            } else {
+                UPLOAD_MODAL.FILENAME_HELPER.attr('data-error', '文件名不能为空');
+                UPLOAD_MODAL.FILENAME.removeClass('valid');
+                UPLOAD_MODAL.FILENAME.addClass('invalid');
+            }
+        });
+
+        function uploadSGF() {
+            if (sgf) {
+                if (CLOUD_COMPONENT.CURRENT) {
+                    update_cloud_sgf();
                 } else {
-                    prev.push(branchBegin + 1);
-                    doUpdateTree(lastId, branch[branchBegin + 1], prev);
-                    prev.pop();
+                    UPLOAD_MODAL.FILENAME.val('');
+                    UPLOAD_MODAL.COMMENT.val('');
+                    UPLOAD_MODAL.SHARE.prop('checked', false);
+                    $('#upload-modal').modal('open');
                 }
             }
         }
 
-        function clearTree() {
-            const tree = $('#tree').jstree();
-            const json = tree.get_json();
-            return tree.delete_node(doClearTree(json[0].children));
-        }
+        function doUploadSGF() {
+            const filenameText  = $.trim(UPLOAD_MODAL.FILENAME.val());
+            const commentText   = $.trim(UPLOAD_MODAL.COMMENT.val());
+            const shareCheck    = UPLOAD_MODAL.SHARE.prop('checked');
 
-        function doClearTree(array) {
-            const deleted = [];
-            array.forEach(node => {
-                let children = [];
-                if (node.children.length > 0) {
-                    children = doClearTree(children);
+            if (sgf) {
+                if (CLOUD_COMPONENT.CURRENT) {
+                    SGFDB.update(CLOUD_COMPONENT.CURRENT.id, {
+                        filename: filenameText,
+                        comment: commentText,
+                        share: shareCheck
+                    }, res => {
+                        if (res.code == 0) {
+                            CLOUD_COMPONENT.CURRENT.filename = filenameText;
+                            CLOUD_COMPONENT.CURRENT.comment = commentText;
+                            CLOUD_COMPONENT.CURRENT.share = shareCheck;
+                            updatePageTitle(`云棋谱 - ${filenameText}`);
+                            M.toast({html: '更新成功', displayLength: 1500});
+                            $('#upload-modal').modal('close');
+                        } else {
+                            M.toast({html: '文件不存在或者没有权限访问', displayLength: 1500});
+                        }
+                    });
+                } else {
+                    const sgfString = sgf.instance.save();
+                    SGFDB.create({
+                        filename: filenameText,
+                        content: sgfString,
+                        comment: commentText,
+                        share: shareCheck
+                    }, res => {
+                        if (res.code == 0) {
+                            load_cloud_sgf(res.payload.id, false);
+                            M.toast({html: '上传成功', displayLength: 1500});
+                            $('#upload-modal').modal('close');
+                        } else {
+                            M.toast({html: '文件名已存在', displayLength: 1500});
+                        }
+                    });
                 }
-                children.forEach(id => deleted.push(id));
-                deleted.push(node.id);
-            });
-            return deleted;
+            }
         }
 
-        // $(window).bind('beforeunload', leaveWarnning);
-        // function leaveWarnning(e) {
-        //     e.returnValue = '棋谱还未保存，确认离开页面？';
-        //     return e.returnValue;
-        // }
+        const CLOUD_COMPONENT = {
+            LIST: $('#cloud-list-modal-list'),
+            AUTOSAVE_SWITCH: $('#cloud-autosave-switch'),
+            UPDATE_BTN: $('#cloud-update-btn'),
+            EDITOR_BTN: $('#cloud-editor-btn'),
+            SHARE_BTN: $('#cloud-share-btn'),
+            DELETE_BTN: $('#cloud-remove-btn'),
+            LOADING: false,
+            CURRENT: false
+        };
+        const SHARE_CLIPBOARD= new ClipboardJS('#cloud-share-btn');
+        SHARE_CLIPBOARD.on('success', e => {
+            M.toast({html: '已复制分享链接到剪贴板', displayLength: 1500});
+        });
+
+        function cloud_list_open() {
+            if (NETAUTH.isLogin()) {
+                $('#cloud-list-modal').modal('open');
+                SGFDB.getMyList(res => {
+                    const list = res.payload.list;
+                    CLOUD_COMPONENT.LIST.empty();
+                    list.forEach(record => CLOUD_COMPONENT.LIST.append(`<a class="collection-item" onclick="load_cloud_sgf(${record.id});">
+                            <span class="title">${record.filename} <span class="secondary-content">${record.updated_at}</span></span>
+                            <p style="margin: 0;">${record.comment} &nbsp; </p></a>`));
+                });
+            } else {
+                retryLogin('请先登录');
+            }
+        }
+
+        function load_cloud_sgf(id, cover=true) {
+            if (!CLOUD_COMPONENT.LOADING) {
+                CLOUD_COMPONENT.LOADING = true;
+                SGFDB.get(id, res => {
+                    if (res.code == 0) {
+                        CLOUD_COMPONENT.CURRENT = res.payload;
+                        CLOUD_COMPONENT.SHARE_BTN.attr('data-clipboard-text', `https://sgf.godojo.cn/?visit=${res.payload.id}`);
+                        cloud_mode(true);
+                        if (cover) {
+                            window.sgf = SGFPlayer.open(res.payload.content, 'chessboard', 'tree');
+                            $('#cloud-list-modal').modal('close');
+                            $('#begin-modal').modal('close');
+                        }
+                        updatePageTitle(`云棋谱 - ${res.payload.filename}`);
+                        setTimeout(() => CLOUD_COMPONENT.LOADING = false, 500);
+                    } else {
+                        M.toast({html: '文件不存在或者没有权限访问', displayLength: 1500});
+                    }
+                });
+            }
+        }
+
+        function cloud_mode(is) {
+            if (is) {
+                CLOUD_COMPONENT.AUTOSAVE_SWITCH.css('display', 'inline');
+                CLOUD_COMPONENT.EDITOR_BTN.css('display', '');
+                CLOUD_COMPONENT.SHARE_BTN.css('display', '');
+                CLOUD_COMPONENT.DELETE_BTN.css('display', '');
+            } else {
+                CLOUD_COMPONENT.AUTOSAVE_SWITCH.css('display', 'none');
+                CLOUD_COMPONENT.EDITOR_BTN.css('display', 'none');
+                CLOUD_COMPONENT.SHARE_BTN.css('display', 'none');
+                CLOUD_COMPONENT.DELETE_BTN.css('display', 'none');
+            }
+        }
+
+        function update_cloud_sgf(auto=false) {
+            if (CLOUD_COMPONENT.CURRENT) {
+                const sgfString = sgf.instance.save();
+                SGFDB.update(CLOUD_COMPONENT.CURRENT.id, { content: sgfString }, res => {
+                    if (res.code == 0) {
+                        CLOUD_COMPONENT.CURRENT.content = sgfString;
+                        cloud_update_end();
+                        !auto && M.toast({html: '更新成功', displayLength: 1500});
+                    } else {
+                        M.toast({html: '文件不存在或者没有权限访问', displayLength: 1500});
+                    }
+                });
+            }
+        }
+
+        function cloud_update_status() { 
+            if (CLOUD_COMPONENT.CURRENT) {
+                const sgfString = sgf.instance.save();
+                if (CLOUD_COMPONENT.CURRENT.content != sgfString) {
+                    CLOUD_COMPONENT.UPDATE_BTN.css('display', '')
+                } else {
+                    CLOUD_COMPONENT.UPDATE_BTN.css('display', 'none')
+                }
+            }
+        }
+
+        function cloud_update_end() {
+            CLOUD_COMPONENT.CURRENT && CLOUD_COMPONENT.UPDATE_BTN.css('display', 'none');
+        }
+
+        function clound_autosave_status() {
+            return CLOUD_COMPONENT.AUTOSAVE_SWITCH.children('label').children('input').prop('checked');
+        }
+
+        function cloud_editor() {
+            if (CLOUD_COMPONENT.CURRENT) {
+                UPLOAD_MODAL.FILENAME.val(CLOUD_COMPONENT.CURRENT.filename);
+                UPLOAD_MODAL.COMMENT.val(CLOUD_COMPONENT.CURRENT.comment);
+                UPLOAD_MODAL.SHARE.prop('checked', CLOUD_COMPONENT.CURRENT.share);
+                M.updateTextFields();
+                $('#upload-modal').modal('open');
+            }
+        }
+
+        function cloud_remove() {
+            if (CLOUD_COMPONENT.CURRENT) {
+                SGFDB.delete(CLOUD_COMPONENT.CURRENT.id, res => {
+                    if (res.code == 0) {
+                        updatePageTitle(`本地棋谱 - ${CLOUD_COMPONENT.CURRENT.filename}`);
+                        CLOUD_COMPONENT.CURRENT = false;
+                        cloud_mode(false);
+                    } else {
+                        M.toast({html: '文件不存在或者没有权限访问', displayLength: 1500});
+                    }
+                });
+            }
+        }
+
+        /** startup */
+        window.URL_PARAMS = (() => {
+            const query = window.location.search.substring(1);
+            const vars = query.split("&");
+            const params = {};
+            if (vars.length > 0 && $.trim(query).length > 0) {
+                for (let i = 0; i < vars.length; i++) {
+                    var pair = vars[i].split("=");
+                    if (pair[1] != undefined) {
+                        params[pair[0]] = pair[1];
+                    } 
+                }
+            }
+            return params;
+        })();
+        NETAUTH.initialize = () => setTimeout(() => {
+            if (!dataResume()) {
+                $('#begin-modal').modal('open');
+                if (URL_PARAMS.visit) {
+                    load_cloud_sgf(URL_PARAMS.visit);
+                }
+            }  
+        }, 500);
+
+        // $(window).bind('beforeunload', _ => dataBackup());
     </script>
+    <!-- ==== -->
 </body>
 </html>
