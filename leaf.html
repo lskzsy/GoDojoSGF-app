@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> 【GoDojo】嘿嘿 - HeyGo | Online SGF Editor </title>
+
+    <link href="css/google-icons.css" rel="stylesheet">
+    <link href="css/materialize.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="grey lighten-6"></nav>
+    <div class="container" style="margin: 0; padding: 0;">
+        <div id="chessboard" style="margin: 0 auto; width: 400px; height: 400px;"></div>
+    </div>
+    
+
+    <div class="fixed-action-btn">
+        <a class="btn-floating btn-large grey lighten-6 waves-effect confirmBtn">
+            <i class="large material-icons" onclick="doStoneConfirm(false);">close</i>
+        </a>
+        <a class="btn-floating btn-large grey lighten-6 waves-effect confirmBtn">
+            <i class="large material-icons" onclick="doStoneConfirm(true);">check</i>
+        </a>
+    </div>
+
+    <!-- ========== Libaries ========== -->
+    <script src="js/platform.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/jstree.min.js"></script>
+    <script src="js/materialize.min.js"></script>
+    <script src="js/clipboard.min.js"></script>
+    <script src="https://godojo.cn/auth/login.js"></script>
+    <!-- ============================== -->
+
+    <!-- ============ Core ============ -->
+    <script src="GoDojoSGF.bundle.js"></script>
+    <!-- ============================== -->
+
+    <!-- ========== Services ========== -->
+    <script src="js/theme.js"></script>
+    <script src="js/backend.js"></script>
+    <script src="js/mobile/player.js"></script>
+    <script src="js/resume.js"></script>
+    <!-- ============================== -->
+
+    <!-- Page -->
+    <script>
+        window.sgf = false;
+        $('.confirmBtn').hide();
+
+        function onStoneConfirm() {
+            // $('.confirmBtn').show();
+            alert('11111');
+        }
+
+        function doStoneConfirm(isConfirm) {
+            if (window.sgf) {
+                isConfirm ? 
+                    window.sgf.instance.confirmPutStone() : 
+                    window.sgf.instance.quitPutStone();
+            }
+
+            $('.confirmBtn').hide();
+        }
+
+        $(document).ready(() => {
+            window.sgf = SGFPlayer.create('19:19', 'chessboard', 'tree');
+            window.sgf.instance.confirmMode(true, onStoneConfirm);
+        });
+    </script>
+</body>
+</html>
