@@ -7,21 +7,183 @@
 
     <link href="css/google-icons.css" rel="stylesheet">
     <link href="css/materialize.min.css" rel="stylesheet">
+    <link href="css/jstree.min.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="grey lighten-6"></nav>
-    <div class="container" style="margin: 0; padding: 0;">
-        <div id="chessboard" style="margin: 0 auto; width: 400px; height: 400px;"></div>
+    <nav class="grey lighten-6">
+        <div class="nav-wrapper row" style="margin-left: 20px;">
+            <span id="page-title"></span>
+            <div id="cloud-autosave-switch" class="switch" style="display: none; margin-left: 20px;">
+                <label style="color: black;">
+                    自动同步
+                    <input type="checkbox">
+                    <span class="lever" style="margin: 0px;"></span>
+                </label>
+            </div>
+            <a id="cloud-update-btn" class="waves-effect waves-light btn-flat" style="display: none;" onclick="update_cloud_sgf();">
+                <i class="material-icons left" style="line-height: inherit; font-size: 1.3rem; margin-right: 0px;">refresh</i>
+                未保存改动
+            </a>
+            <div style="position: absolute; right: 0px; display: inline;">
+                <button id="user-login-btn" class="waves-effect black-text grey lighten-4 btn" onclick="dataBackup(); NETAUTH.login();"> 
+                    <i class="material-icons left" style="line-height: inherit; font-size: 1.3rem">person</i> 登录/注册 
+                </button>
+            </div>
+        </div>
+    </nav>
+    <div class="container" style="margin: 0; padding: 0; width: 100%;">
+        <div id="chessboard" style="margin: 0 auto; width: 100%;"></div>
+        <div class="row" style="text-align: center; margin-top: 5px;">
+            <button class="btn btn-small waves-effect black-text grey lighten-4" style="padding-left: 5px; padding-right: 5px;" onclick="sgf && sgf.instance.left();">快退
+                    <i class="material-icons small left" style="margin-right: 5px;">fast_rewind</i></button>
+            <button class="btn btn-small waves-effect black-text grey lighten-4" style="padding-left: 5px; padding-right: 5px;" onclick="sgf && sgf.instance.back();">后退
+                    <i class="material-icons small left" style="margin-right: 5px;">arrow_left</i></button>
+            <button class="btn btn-small waves-effect black-text grey lighten-4" style="padding-left: 5px; padding-right: 5px;" onclick="sgf && sgf.instance.continue();">前进
+                    <i class="material-icons small right" style="margin-left: 5px;">arrow_right</i></button>
+            <button class="btn btn-small waves-effect black-text grey lighten-4" style="padding-left: 5px; padding-right: 5px;" onclick="sgf && sgf.instance.right();">快进
+                    <i class="material-icons small right" style="margin-left: 5px;">fast_forward</i></button>
+        </div>
     </div>
-    
+
+    <ul id="slide-out" class="sidenav">
+    </ul>
 
     <div class="fixed-action-btn">
-        <a class="btn-floating btn-large grey lighten-6 waves-effect confirmBtn">
+        <a class="btn-floating btn-large red lighten-6 waves-effect confirmBtn">
             <i class="large material-icons" onclick="doStoneConfirm(false);">close</i>
         </a>
-        <a class="btn-floating btn-large grey lighten-6 waves-effect confirmBtn">
+        <a class="btn-floating btn-large green waves-effect confirmBtn">
             <i class="large material-icons" onclick="doStoneConfirm(true);">check</i>
         </a>
+        <a class="btn-floating btn-large grey waves-effect">
+            <i class="large material-icons" onclick="$('#setting-modal').modal('open')">settings</i>
+        </a>
+    </div>
+
+    <div id="relogin-modal" class="modal" style="width: 300px;">
+        <div class="modal-content">
+            <h5 id="relogin-modal-title"> 是否重新登录？</h5>
+            <div class="divider"></div>
+            <div style="margin-top: 20px; margin-bottom: 20px; text-align: center;">
+                <a class="btn waves-effect black-text grey lighten-4" onclick="dataBackup(); NETAUTH.login();"> 
+                    <i class="material-icons left">done</i>确定</a>
+                <a class="btn waves-effect black-text grey lighten-4 modal-close">
+                    <i class="material-icons left">close</i>取消</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="setting-modal" class="modal modal-fixed-footer" style="width: 300px;">
+        <div class="modal-content">
+            <h5> 设置 </h5>
+            <div class="divider"></div>
+            <div style="margin-top: 20px; margin-bottom: 20px;">
+                <div class="input-field row">
+                    <select id="modeSelector">
+                    <option value="repeat" selected>交替落子</option>
+                    <option value="b">只落黑子</option>
+                    <option value="w">只落白子</option>
+                    <option value="mark">添加标记</option>
+                    </select>
+                    <label> 落子模式 </label>
+                </div>
+                <div class="input-field row" id="markTypeSelectorView">
+                    <select id="markTypeSelector">
+                    <option value="SQ" selected>方形</option>
+                    <option value="CR">圆形</option>
+                    <option value="TR">三角</option>
+                    <option value="MA">交叉</option>
+                    <option value="LB">字母</option>
+                    </select>
+                    <label> 标记类型 </label>
+                </div>
+
+                <label> 棋盘设置 </label>
+                <div class="divider"></div>
+                <div class="input-field row">
+                    <div class="switch" style="height: 40px;">
+                        <label>
+                            坐标显示
+                            <input id="coordinateShow" type="checkbox">
+                            <span class="lever"></span>
+                        </label>
+                    </div>
+                    <div class="switch" style="height: 40px;">
+                        <label>
+                            步数显示
+                            <input id="stepShow" type="checkbox">
+                            <span class="lever"></span>
+                        </label>
+                    </div>
+                    <div class="switch" style="height: 40px;">
+                        <label>
+                            落子辅助
+                            <input id="promptShow" type="checkbox" checked>
+                            <span class="lever"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="modal-close waves-effect btn-flat">返回</a>
+        </div>
+    </div>
+
+    <div id="new-modal" class="modal" style="width: 300px;">
+        <div class="modal-content">
+            <h4>创建新棋谱</h4>
+            <div class="divider"></div>
+            <div class="row" style="margin-bottom: 0px;">
+                <div class="input-field col s6">
+                    <input value="19" id="board-width-text" type="number" class="validate">
+                    <label for="first_name">棋盘长</label>
+                </div>
+                <div class="input-field col s6">
+                    <input value="19" id="board-height-text" type="number" class="validate">
+                    <label for="last_name">棋盘宽</label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="waves-effect btn-flat" onclick="newBoard();">创建</a>
+            <a class="modal-close waves-effect btn-flat">取消</a>
+        </div>
+    </div>
+
+    <div id="cloud-list-modal" class="modal" style="width: 300px;">
+        <div class="modal-content">
+            <h5> 云端列表 </h5>
+            <div class="divider"></div>
+            <div style="margin-top: 20px; margin-bottom: 20px; height: 320px; overflow: scroll;">
+                <ul id="cloud-list-modal-list" class="collection">
+                </ul>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a class="modal-close waves-effect btn-flat">返回</a>
+        </div>
+    </div>
+
+    <div id="begin-modal" class="modal" style="width: 300px;">
+        <div class="modal-content">
+            <h4>开始</h4>
+            <div class="divider"></div>
+            <div style="margin-top: 20px; margin-bottom: 20px; text-align: center;">
+                <div class="row">
+                    <a class="btn waves-effect black-text grey lighten-4 begin-btn" rel="new">
+                        <i class="material-icons left">open_in_new</i>创建新棋谱</a>
+                </div>
+                <div class="row">
+                    <a class="btn waves-effect black-text grey lighten-4 begin-btn" rel="local">
+                        <i class="material-icons left">folder_open</i>从本地打开</a>
+                </div>
+                <div class="row">
+                    <a class="btn waves-effect black-text grey lighten-4 begin-btn" rel="cloud">
+                        <i class="material-icons left">cloud_download</i>从云端下载</a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ========== Libaries ========== -->
@@ -41,6 +203,7 @@
     <script src="js/theme.js"></script>
     <script src="js/backend.js"></script>
     <script src="js/mobile/player.js"></script>
+    <script src="js/cloud.js"></script>
     <script src="js/resume.js"></script>
     <!-- ============================== -->
 
@@ -48,10 +211,10 @@
     <script>
         window.sgf = false;
         $('.confirmBtn').hide();
+        $('#markTypeSelectorView').hide();
 
         function onStoneConfirm() {
-            // $('.confirmBtn').show();
-            alert('11111');
+            $('.confirmBtn').show();
         }
 
         function doStoneConfirm(isConfirm) {
@@ -64,9 +227,142 @@
             $('.confirmBtn').hide();
         }
 
-        $(document).ready(() => {
-            window.sgf = SGFPlayer.create('19:19', 'chessboard', 'tree');
+        $('.begin-btn').on('click', (e) => {
+            const type = e.currentTarget.attributes.rel.value;
+            switch (type) {
+                case 'new': 
+                    $('#new-modal').modal('open');
+                    break;
+                case 'local': 
+                    localBoard();
+                    break;
+                case 'cloud':
+                    cloud_list_open();
+                    break;
+            }
+        });
+
+        $('#modeSelector').change(e => {
+            let mode = e.currentTarget.value;
+            switch (mode) {
+                case 'w':
+                    M.toast({html: '只落白子', displayLength: 1500});
+                    $('#markTypeSelectorView').hide();
+                    break;
+                case 'b':
+                    M.toast({html: '只落黑子', displayLength: 1500});
+                    $('#markTypeSelectorView').hide();
+                    break;
+                case 'repeat':
+                    M.toast({html: '交替落子', displayLength: 1500});
+                    $('#markTypeSelectorView').hide();
+                    break;
+                case 'mark':
+                    $('#markTypeSelectorView').show();
+                    mode += $('#markTypeSelector').val();
+                    break;
+            }
+            sgf && sgf.instance.setInputMode(mode);
+        });
+
+        $('#markTypeSelector').change(e => {
+            sgf && sgf.instance.setInputMode(`mark${e.currentTarget.value}`);
+        });
+
+        $('#coordinateShow').on('click', (e) => {
+            if (e.currentTarget.checked) {
+                sgf && sgf.instance.showCoordinate();
+            } else {
+                sgf && sgf.instance.hideCoordinate();
+            }
+        });
+
+        $('#stepShow').on('click', (e) => {
+            if (e.currentTarget.checked) {
+                sgf && sgf.instance.showStep();
+            } else {
+                sgf && sgf.instance.hideStep();
+            }
+        });
+
+        $('#promptShow').on('click', (e) => {
+            if (e.currentTarget.checked) {
+                sgf && sgf.instance.showPrompt();
+            } else {
+                sgf && sgf.instance.hidePrompt();
+            }
+        });
+
+        function newBoard() {
+            const width = $('#board-width-text').val();
+            const height = $('#board-height-text').val();
+            const size = width == height ? width : `${width}:${height}`;
+            window.sgf = SGFPlayer.create(size, 'chessboard', 'tree');
             window.sgf.instance.confirmMode(true, onStoneConfirm);
+            $('#new-modal').modal('close');
+            $('#begin-modal').modal('close');
+            cloud_mode(false);
+            updatePageTitle('未命名');
+        }
+
+        function localBoard() {
+            const reader = $('<input style="display: none;" type="file" accept=".sgf">');
+            reader.on('change', (e) => {
+                const file = e.currentTarget.files[0];
+                const fileReader = new FileReader();
+                cloud_mode(false);
+                updatePageTitle(`本地棋谱 - ${file.name}`);
+                fileReader.readAsText(file);
+                fileReader.onload = ee => {
+                    window.sgf = SGFPlayer.open(ee.target.result, 'chessboard', 'tree');
+                    window.sgf.instance.confirmMode(true, onStoneConfirm);
+                    $('#begin-modal').modal('close');
+                }
+            });
+            reader.click();
+        }
+
+        function load_cloud_sgf(id, cover=true) {
+            if (!CLOUD_COMPONENT.LOADING) {
+                CLOUD_COMPONENT.LOADING = true;
+                SGFDB.get(id, res => {
+                    if (res.code == 0) {
+                        CLOUD_COMPONENT.CURRENT = res.payload;
+                        CLOUD_COMPONENT.SHARE_BTN.attr('data-clipboard-text', `https://sgf.godojo.cn/?visit=${res.payload.id}`);
+                        cloud_mode(true);
+                        if (cover) {
+                            window.sgf = SGFPlayer.open(res.payload.content, 'chessboard', 'tree');
+                            window.sgf.instance.confirmMode(true, onStoneConfirm);
+                            $('#cloud-list-modal').modal('close');
+                            $('#begin-modal').modal('close');
+                        }
+                        updatePageTitle(`云棋谱 - ${res.payload.filename}`);
+                        setTimeout(() => CLOUD_COMPONENT.LOADING = false, 500);
+                    } else {
+                        M.toast({html: '文件不存在或者没有权限访问', displayLength: 1500});
+                    }
+                });
+            }
+        }
+
+        function updatePageTitle(title) {
+            $('#page-title').text(title);
+        }
+
+        function cloud_mode(is) {
+        }
+
+        $(document).ready(() => {
+            $('.sidenav').sidenav({
+                menuWidth: 150,
+                edge: 'right',
+                closeOnClick: true,
+                draggable: true
+            });
+            $('.modal').modal({ dismissible: false });
+            $('select').formSelect();
+
+            $('#begin-modal').modal('open');
         });
     </script>
 </body>

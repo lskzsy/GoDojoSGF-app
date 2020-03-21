@@ -26,7 +26,6 @@ function dataResume() {
         $('#cloud-list-modal').modal('close');
         $('#begin-modal').modal('close');
         $('#page-title').text(title);
-        console.log(playerRoute);
         setTimeout(() => sgf.instance.jump(JSON.parse(playerRoute)), 500);
 
         localStorage.removeItem('resume_data_sgf');
